@@ -1,0 +1,30 @@
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        google()
+        mavenCentral()
+    }
+}
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+        mavenCentral()
+        maven {
+            url 'https://api.mapbox.com/downloads/v2/releases/maven'
+            authentication {
+                basic(BasicAuthentication)
+            }
+            credentials {
+                // Do not change the username below.
+                // This should always be `mapbox` (not your username).
+                username = "mapbox"
+                //TODO Use the secret token you stored in gradle.properties as the password
+                password = "sk.eyJ1IjoiYnVyYWRhdml2ZWsiLCJhIjoiY2wyaGJ0NTQwMGJrNDNpbno4M29pYmp2biJ9.1tyOEJWAdejRFo5nxgfK3g"
+            }
+        }
+    }
+}
+rootProject.name = "Zendaya"
+include ':app'
+
