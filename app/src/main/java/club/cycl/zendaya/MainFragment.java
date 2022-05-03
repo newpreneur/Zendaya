@@ -1,8 +1,10 @@
 package club.cycl.zendaya;
 
 import android.annotation.SuppressLint;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.location.Location;
 import android.net.Uri;
 import android.os.Bundle;
@@ -53,6 +55,7 @@ public class MainFragment extends Fragment  implements
     private LocationEngine locationEngine;
     private LocationChangeListeningActivityLocationCallback callback =
             new LocationChangeListeningActivityLocationCallback(this);
+    private BroadcastReceiver myReceiver;
 
     @Override
     public View onCreateView(
@@ -96,6 +99,21 @@ public class MainFragment extends Fragment  implements
                 startActivity(intent);
             }
         });
+
+        myReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                if(intent.hasExtra("DATAPASSED") && intent.hasExtra("ALBUM_DATA")) {
+                    String datapa = intent.getStringExtra("DATAPASSED");
+                    String datap2 = intent.getStringExtra("ALBUM_DATA");
+                    Log.d("TITLE OF SONG", datapa);
+                    Log.d("ALBUM", datap2);
+                }
+            }
+        };
+        IntentFilter intentFilter = new IntentFilter();
+        intentFilter.addAction("VIVEK");
+        ctx.registerReceiver(myReceiver, intentFilter);
     }
 
     @Override
@@ -174,6 +192,7 @@ public class MainFragment extends Fragment  implements
     public void onStart() {
         super.onStart();
         mapView.onStart();
+
     }
 
     @Override

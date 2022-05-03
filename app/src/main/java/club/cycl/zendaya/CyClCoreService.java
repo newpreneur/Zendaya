@@ -1,8 +1,6 @@
 package club.cycl.zendaya;
 
 
-import static androidx.core.content.PackageManagerCompat.LOG_TAG;
-
 import android.annotation.SuppressLint;
 import android.app.Service;
 import android.content.Context;
@@ -102,7 +100,7 @@ initLocationEngine();
     }
 
 
-    private static class LocationListeningCallback
+    private class LocationListeningCallback
             implements LocationEngineCallback<LocationEngineResult> {
 
         private final WeakReference<Service> fragmentWeakReference;
@@ -119,7 +117,14 @@ initLocationEngine();
             if (lastLocation != null) {
                 Log.e(TAG, "location: " + lastLocation.toString());
                 if (lastLocation.hasAccuracy()) {
+                    //TODO Send data to Interface.
                     Log.d(TAG, "Locations: "+ lastLocation.toString());
+                    Intent intent = new Intent();
+                    intent.setAction("VIVEK");
+                    intent.putExtra("DATAPASSED", String.valueOf(lastLocation.getLatitude()));
+                    intent.putExtra("ALBUM_DATA",String.valueOf(lastLocation.getLongitude()));
+                    sendBroadcast(intent);
+
                 }
             }
         }
