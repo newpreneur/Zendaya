@@ -1,5 +1,9 @@
 package club.cycl.zendaya;
 
+
+import static androidx.core.content.PackageManagerCompat.LOG_TAG;
+
+import android.annotation.SuppressLint;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
@@ -7,17 +11,42 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.location.Location;
+import android.location.LocationManager;
 import android.os.Build;
+import android.os.Bundle;
 import android.os.IBinder;
+import android.os.Looper;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
+import androidx.navigation.Navigation;
+import androidx.navigation.NavigatorProvider;
 
+import com.mapbox.android.core.location.LocationEngine;
+import com.mapbox.android.core.location.LocationEngineCallback;
+import com.mapbox.android.core.location.LocationEngineProvider;
+import com.mapbox.android.core.location.LocationEngineRequest;
+import com.mapbox.android.core.location.LocationEngineResult;
+import com.mapbox.android.core.permissions.PermissionsListener;
+import com.mapbox.android.core.permissions.PermissionsManager;
+import com.mapbox.mapboxsdk.Mapbox;
+import com.mapbox.mapboxsdk.maps.MapboxMap;
+import com.mapbox.navigation.base.options.NavigationOptions;
+import com.mapbox.navigation.core.MapboxNavigation;
+import com.mapbox.navigation.core.MapboxNavigationProvider;
+import com.mapbox.navigation.core.trip.session.LocationMatcherResult;
+import com.mapbox.navigation.core.trip.session.LocationObserver;
+import com.mapbox.navigation.ui.maps.location.NavigationLocationProvider;
+
+import java.lang.ref.WeakReference;
 import java.util.HashMap;
+import java.util.List;
 
-public class CyClCoreService extends Service  implements SensorEventListener {
-    private final String TAG= CyClCoreService.class.getName();
-    private SensorManager mSensorManager=null;
+public class CyClCoreService extends Service implements SensorEventListener, PermissionsListener {
+    private static final String TAG = CyClCoreService.class.getName();
+    private SensorManager mSensorManager = null;
     private HashMap<String, Sensor> mSensors = new HashMap<>();
     private float mInitialStepCount = -1;
     private final float[] mAcceMeasure = new float[3];
@@ -27,6 +56,81 @@ public class CyClCoreService extends Service  implements SensorEventListener {
     private final float[] mAcceBias = new float[3];
     private final float[] mGyroBias = new float[3];
     private final float[] mMagnetBias = new float[3];
+
+    private static final long DEFAULT_INTERVAL_IN_MILLISECONDS = 1000L;
+    private static final long DEFAULT_MAX_WAIT_TIME = DEFAULT_INTERVAL_IN_MILLISECONDS * 5;
+    private PermissionsManager permissionsManager;
+    private LocationEngine locationEngine;
+    private LocationListeningCallback callback = new LocationListeningCallback(this);
+
+    /**
+     * Set up the LocationEngine and the parameters for querying the device's location
+     */
+    @SuppressLint("MissingPermission")
+    private void initLocationEngine() {
+        locationEngine = LocationEngineProvider.getBestLocationEngine(this);
+
+        LocationEngineRequest request = new LocationEngineRequest.Builder(DEFAULT_INTERVAL_IN_MILLISECONDS)
+                .setPriority(LocationEngineRequest.PRIORITY_HIGH_ACCURACY)
+                .setMaxWaitTime(DEFAULT_MAX_WAIT_TIME).build();
+
+        locationEngine.requestLocationUpdates(request, callback, Looper.getMainLooper());
+        locationEngine.getLastLocation(callback);
+    }
+
+    @SuppressLint("MissingPermission")
+    private void enableLocationComponent() {
+        if (PermissionsManager.areLocationPermissionsGranted(this)) {
+initLocationEngine();
+        } else {
+        }
+    }
+
+    @Override
+    public void onExplanationNeeded(List<String> permissionsToExplain) {
+
+    }
+
+    @Override
+    public void onPermissionResult(boolean granted) {
+        if (granted) {
+            // Permission sensitive logic called here, such as activating the Maps SDK's LocationComponent to show the device's location
+            enableLocationComponent();
+        } else {
+            // User denied the permission
+        }
+    }
+
+
+    private static class LocationListeningCallback
+            implements LocationEngineCallback<LocationEngineResult> {
+
+        private final WeakReference<Service> fragmentWeakReference;
+
+        LocationListeningCallback(CyClCoreService service) {
+            this.fragmentWeakReference = new WeakReference<>(service);
+        }
+
+        @Override
+        public void onSuccess(LocationEngineResult result) {
+
+            // The LocationEngineCallback interface's method which fires when the device's location has changed.
+            Location lastLocation = result.getLastLocation();
+            if (lastLocation != null) {
+                Log.e(TAG, "location: " + lastLocation.toString());
+                if (lastLocation.hasAccuracy()) {
+                    Log.d(TAG, "Locations: "+ lastLocation.toString());
+                }
+            }
+        }
+
+        @Override
+        public void onFailure(@NonNull Exception exception) {
+            Log.e(TAG, "failed to get device location");
+
+            // The LocationEngineCallback interface's method which fires when the device's location can not be captured
+        }
+    }
 
     @Override
     public void onCreate() {
@@ -45,17 +149,25 @@ public class CyClCoreService extends Service  implements SensorEventListener {
             mSensorManager.unregisterListener(this, eachSensor);
         }
     }
+       public void unregisterLocationEngine(){
+           if (locationEngine != null) {
+               locationEngine.removeLocationUpdates(callback);
+           }
+       }
 
     @Override
     public void onDestroy() {
         super.onDestroy();
         unregisterSensors();
+        unregisterLocationEngine();
         Log.d(TAG, "onDestroy: Service");
+
     }
 
     @RequiresApi(api = Build.VERSION_CODES.O)
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        Mapbox.getInstance(this, getString(R.string.mapbox_access_token));
         mSensorManager = (SensorManager) this.getSystemService(Context.SENSOR_SERVICE);
         mSensors.put("acce", mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER));
         mSensors.put("acce_uncalib", mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER_UNCALIBRATED));
@@ -71,8 +183,8 @@ public class CyClCoreService extends Service  implements SensorEventListener {
         mSensors.put("step", mSensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER));
         mSensors.put("pressure", mSensorManager.getDefaultSensor(Sensor.TYPE_PRESSURE));
         registerSensors();
+        enableLocationComponent();
         return super.onStartCommand(intent, flags, startId);
-
     }
 
     public CyClCoreService() {

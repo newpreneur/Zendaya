@@ -4,8 +4,10 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
 import android.location.Location;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Looper;
+import android.provider.Settings;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -63,6 +65,7 @@ public class MainFragment extends Fragment  implements
         mapView = binding.mapView;
         mapView.onCreate(savedInstanceState);
         mapView.getMapAsync(this);
+
         return binding.getRoot();
     }
     public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
@@ -80,6 +83,17 @@ public class MainFragment extends Fragment  implements
             public void onClick(View view) {
 //                binding.animationView.pauseAnimation();
                 requireActivity().stopService(new Intent(ctx, CyClCoreService.class));
+            }
+        });
+
+        binding.buttonPermissions.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+//                binding.animationView.pauseAnimation();
+                Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+                Uri uri = Uri.fromParts("package", ctx.getPackageName(), null);
+                intent.setData(uri);
+                startActivity(intent);
             }
         });
     }
@@ -234,13 +248,12 @@ public class MainFragment extends Fragment  implements
     public void onMapReady(@NonNull MapboxMap mapboxMap) {
         this.mapboxMap = mapboxMap;
 
-        mapboxMap.setStyle(Style.TRAFFIC_DAY,
+        mapboxMap.setStyle(new Style.Builder().fromUri("mapbox://styles/buradavivek/cl2kxo9fa003714l4j536pz0j"),
                 new Style.OnStyleLoaded() {
                     @Override public void onStyleLoaded(@NonNull Style style) {
                         enableLocationComponent(style);
                     }
                 });
-
     }
 
     /**

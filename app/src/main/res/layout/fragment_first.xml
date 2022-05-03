@@ -17,7 +17,7 @@
         app:layout_constraintTop_toTopOf="parent"
         mapbox:mapbox_cameraTargetLat="48.20355511"
         mapbox:mapbox_cameraTargetLng="16.374893"
-        mapbox:mapbox_cameraZoom="12" >
+        mapbox:mapbox_cameraZoom="12">
 
     </com.mapbox.mapboxsdk.maps.MapView>
 
@@ -66,6 +66,20 @@
         android:layout_marginEnd="297dp"
         android:layout_marginBottom="16dp"
         android:text="@string/start"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <Button
+        android:id="@+id/button_permissions"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="161dp"
+        android:layout_marginTop="602dp"
+        android:layout_marginEnd="142dp"
+        android:layout_marginBottom="81dp"
+        android:text="Settings"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"

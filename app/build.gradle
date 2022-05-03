@@ -72,6 +72,8 @@ dependencies {
 
     // Mapbox Buildings Plugin for showing and customizing 3D building extrusions
     implementation 'com.mapbox.mapboxsdk:mapbox-android-plugin-building-v7:0.5.0'
+    implementation "com.mapbox.navigation:android:2.4.1"
+
 
 
 }
