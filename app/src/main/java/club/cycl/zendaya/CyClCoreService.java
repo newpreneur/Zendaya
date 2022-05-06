@@ -2,6 +2,10 @@ package club.cycl.zendaya;
 
 
 import android.annotation.SuppressLint;
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
@@ -10,39 +14,30 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.location.Location;
-import android.location.LocationManager;
+import android.os.Binder;
 import android.os.Build;
-import android.os.Bundle;
 import android.os.IBinder;
 import android.os.Looper;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
-import androidx.navigation.Navigation;
-import androidx.navigation.NavigatorProvider;
+import androidx.core.app.NotificationCompat;
 
 import com.mapbox.android.core.location.LocationEngine;
 import com.mapbox.android.core.location.LocationEngineCallback;
 import com.mapbox.android.core.location.LocationEngineProvider;
 import com.mapbox.android.core.location.LocationEngineRequest;
 import com.mapbox.android.core.location.LocationEngineResult;
-import com.mapbox.android.core.permissions.PermissionsListener;
 import com.mapbox.android.core.permissions.PermissionsManager;
 import com.mapbox.mapboxsdk.Mapbox;
-import com.mapbox.mapboxsdk.maps.MapboxMap;
-import com.mapbox.navigation.base.options.NavigationOptions;
-import com.mapbox.navigation.core.MapboxNavigation;
-import com.mapbox.navigation.core.MapboxNavigationProvider;
-import com.mapbox.navigation.core.trip.session.LocationMatcherResult;
-import com.mapbox.navigation.core.trip.session.LocationObserver;
-import com.mapbox.navigation.ui.maps.location.NavigationLocationProvider;
+
+import org.greenrobot.eventbus.EventBus;
 
 import java.lang.ref.WeakReference;
 import java.util.HashMap;
-import java.util.List;
 
-public class CyClCoreService extends Service implements SensorEventListener, PermissionsListener {
+public class CyClCoreService extends Service implements SensorEventListener {
     private static final String TAG = CyClCoreService.class.getName();
     private SensorManager mSensorManager = null;
     private HashMap<String, Sensor> mSensors = new HashMap<>();
@@ -55,11 +50,30 @@ public class CyClCoreService extends Service implements SensorEventListener, Per
     private final float[] mGyroBias = new float[3];
     private final float[] mMagnetBias = new float[3];
 
+    // Start and end times in milliseconds
+    private long startTime, endTime;
+
+    // Is the service tracking time?
+    private boolean isTimerRunning;
+
+
     private static final long DEFAULT_INTERVAL_IN_MILLISECONDS = 1000L;
     private static final long DEFAULT_MAX_WAIT_TIME = DEFAULT_INTERVAL_IN_MILLISECONDS * 5;
-    private PermissionsManager permissionsManager;
     private LocationEngine locationEngine;
     private LocationListeningCallback callback = new LocationListeningCallback(this);
+
+    public static final String CHANNEL_ID = "ForegroundServiceChannel";
+
+    // Service binder
+    private final IBinder serviceBinder = new RunServiceBinder();
+    private Notification notification;
+
+    public class RunServiceBinder extends Binder {
+        CyClCoreService getService() {
+            return CyClCoreService.this;
+        }
+    }
+
 
     /**
      * Set up the LocationEngine and the parameters for querying the device's location
@@ -71,7 +85,6 @@ public class CyClCoreService extends Service implements SensorEventListener, Per
         LocationEngineRequest request = new LocationEngineRequest.Builder(DEFAULT_INTERVAL_IN_MILLISECONDS)
                 .setPriority(LocationEngineRequest.PRIORITY_HIGH_ACCURACY)
                 .setMaxWaitTime(DEFAULT_MAX_WAIT_TIME).build();
-
         locationEngine.requestLocationUpdates(request, callback, Looper.getMainLooper());
         locationEngine.getLastLocation(callback);
     }
@@ -80,22 +93,8 @@ public class CyClCoreService extends Service implements SensorEventListener, Per
     private void enableLocationComponent() {
         if (PermissionsManager.areLocationPermissionsGranted(this)) {
 initLocationEngine();
-        } else {
         }
-    }
-
-    @Override
-    public void onExplanationNeeded(List<String> permissionsToExplain) {
-
-    }
-
-    @Override
-    public void onPermissionResult(boolean granted) {
-        if (granted) {
-            // Permission sensitive logic called here, such as activating the Maps SDK's LocationComponent to show the device's location
-            enableLocationComponent();
-        } else {
-            // User denied the permission
+        else {
         }
     }
 
@@ -103,10 +102,10 @@ initLocationEngine();
     private class LocationListeningCallback
             implements LocationEngineCallback<LocationEngineResult> {
 
-        private final WeakReference<Service> fragmentWeakReference;
+        private final WeakReference<CyClCoreService> WeakReference;
 
         LocationListeningCallback(CyClCoreService service) {
-            this.fragmentWeakReference = new WeakReference<>(service);
+            this.WeakReference = new WeakReference<>(service);
         }
 
         @Override
@@ -119,12 +118,7 @@ initLocationEngine();
                 if (lastLocation.hasAccuracy()) {
                     //TODO Send data to Interface.
                     Log.d(TAG, "Locations: "+ lastLocation.toString());
-                    Intent intent = new Intent();
-                    intent.setAction("VIVEK");
-                    intent.putExtra("DATAPASSED", String.valueOf(lastLocation.getLatitude()));
-                    intent.putExtra("ALBUM_DATA",String.valueOf(lastLocation.getLongitude()));
-                    sendBroadcast(intent);
-
+                    EventBus.getDefault().post(new CyClPoint(lastLocation.getLatitude(),lastLocation.getLongitude()));
                 }
             }
         }
@@ -132,14 +126,16 @@ initLocationEngine();
         @Override
         public void onFailure(@NonNull Exception exception) {
             Log.e(TAG, "failed to get device location");
-
             // The LocationEngineCallback interface's method which fires when the device's location can not be captured
         }
     }
 
+
     @Override
     public void onCreate() {
         Log.d(TAG, "onCreate: Service Invoked");
+        Mapbox.getInstance(this, getString(R.string.mapbox_access_token));
+
     }
 
     // methods
@@ -157,6 +153,7 @@ initLocationEngine();
        public void unregisterLocationEngine(){
            if (locationEngine != null) {
                locationEngine.removeLocationUpdates(callback);
+               Log.d(TAG, "unregisterLocationEngine: "+locationEngine.toString());
            }
        }
 
@@ -165,14 +162,37 @@ initLocationEngine();
         super.onDestroy();
         unregisterSensors();
         unregisterLocationEngine();
-        Log.d(TAG, "onDestroy: Service");
+        stopForeground(true);
+        stopSelf();
 
+        Log.d(TAG, "onDestroy: Service");
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.O)
+    private void createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel serviceChannel = new NotificationChannel(
+                    CHANNEL_ID,
+                    "locationChannel",
+                    NotificationManager.IMPORTANCE_DEFAULT
+            );
+            NotificationManager manager = getSystemService(NotificationManager.class);
+            manager.createNotificationChannel(serviceChannel);
+        }
+        Intent notificationIntent = new Intent(this, MainActivity.class);
+        PendingIntent pendingIntent = PendingIntent.getActivity(this,
+                0, notificationIntent, PendingIntent.FLAG_IMMUTABLE);
+         notification = new NotificationCompat.Builder(this, CHANNEL_ID)
+                .setContentTitle("CyClClub")
+                .setContentText("Cycl.Club is Running")
+                .setSmallIcon(R.mipmap.ic_launcher)
+                .setContentIntent(pendingIntent)
+                .build();
+    }
+
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        Mapbox.getInstance(this, getString(R.string.mapbox_access_token));
+        createNotificationChannel();
+        startForeground(1, notification);
         mSensorManager = (SensorManager) this.getSystemService(Context.SENSOR_SERVICE);
         mSensors.put("acce", mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER));
         mSensors.put("acce_uncalib", mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER_UNCALIBRATED));
@@ -189,7 +209,9 @@ initLocationEngine();
         mSensors.put("pressure", mSensorManager.getDefaultSensor(Sensor.TYPE_PRESSURE));
         registerSensors();
         enableLocationComponent();
-        return super.onStartCommand(intent, flags, startId);
+//        return super.onStartCommand(intent, flags, startId);
+
+        return START_STICKY;
     }
 
     public CyClCoreService() {
@@ -197,8 +219,10 @@ initLocationEngine();
 
     @Override
     public IBinder onBind(Intent intent) {
-        return null;
+        return serviceBinder;
     }
+
+
 
     @Override
     public void onSensorChanged(SensorEvent sensorEvent) {
@@ -217,7 +241,8 @@ initLocationEngine();
 //                    if (isFileSaved) {
 //                        mFileStreamer.addRecord(timestamp, "acce", 3, sensorEvent.values);
 //                    }
-                    Log.d(TAG, "onSensorChanged:acce "+String.valueOf(timestamp));
+                    Log.d(TAG, "onSensorChanged:acce "+String.valueOf(sensorEvent.values));
+                    EventBus.getDefault().post(new CyClSensor(sensorEvent,"acce"));
                     break;
 
                 case Sensor.TYPE_ACCELEROMETER_UNCALIBRATED:
@@ -229,6 +254,8 @@ initLocationEngine();
 //                        mFileStreamer.addRecord(timestamp, "acce_bias", 3, mAcceBias);
 //                    }
                     Log.d(TAG, "onSensorChanged: acce_uncalib,acce_bias "+String.valueOf(timestamp));
+                    EventBus.getDefault().post(new CyClSensor(sensorEvent,"acce_uncalib"));
+
                     break;
 
                 case Sensor.TYPE_GYROSCOPE:
@@ -239,6 +266,8 @@ initLocationEngine();
 //                        mFileStreamer.addRecord(timestamp, "gyro", 3, sensorEvent.values);
 //                    }
                     Log.d(TAG, "onSensorChanged:gyro "+String.valueOf(timestamp));
+                    EventBus.getDefault().post(new CyClSensor(sensorEvent,"gyro"));
+
                     break;
 
                 case Sensor.TYPE_GYROSCOPE_UNCALIBRATED:
@@ -250,6 +279,8 @@ initLocationEngine();
 //                        mFileStreamer.addRecord(timestamp, "gyro_bias", 3, mGyroBias);
 //                    }
                     Log.d(TAG, "onSensorChanged:gyro_uncalib,gyro_bias "+String.valueOf(timestamp));
+                    EventBus.getDefault().post(new CyClSensor(sensorEvent,"gyro_uncalib"));
+
                     break;
 
                 case Sensor.TYPE_LINEAR_ACCELERATION:
@@ -257,6 +288,8 @@ initLocationEngine();
 //                        mFileStreamer.addRecord(timestamp, "linacce", 3, sensorEvent.values);
 //                    }
                     Log.d(TAG, "onSensorChanged:linacce "+String.valueOf(timestamp));
+                    EventBus.getDefault().post(new CyClSensor(sensorEvent,"linacce"));
+
                     break;
 
                 case Sensor.TYPE_GRAVITY:
@@ -264,6 +297,7 @@ initLocationEngine();
 //                        mFileStreamer.addRecord(timestamp, "gravity", 3, sensorEvent.values);
 //                    }
                     Log.d(TAG, "onSensorChanged:gravity "+String.valueOf(timestamp));
+                    EventBus.getDefault().post(new CyClSensor(sensorEvent,"gravity"));
                     break;
 
                 case Sensor.TYPE_MAGNETIC_FIELD:
@@ -274,6 +308,8 @@ initLocationEngine();
 //                        mFileStreamer.addRecord(timestamp, "magnet", 3, sensorEvent.values);
 //                    }
                     Log.d(TAG, "onSensorChanged:magnet "+String.valueOf(timestamp));
+                    EventBus.getDefault().post(new CyClSensor(sensorEvent,"magnet"));
+
                     break;
 
                 case Sensor.TYPE_MAGNETIC_FIELD_UNCALIBRATED:
@@ -285,6 +321,7 @@ initLocationEngine();
 //                        mFileStreamer.addRecord(timestamp, "magnet_bias", 3, mMagnetBias);
 //                    }
                     Log.d(TAG, "onSensorChanged:magnet_uncalib,magnet_bias "+String.valueOf(timestamp));
+                    EventBus.getDefault().post(new CyClSensor(sensorEvent,"magnet_uncalib"));
                     break;
 
                 case Sensor.TYPE_ROTATION_VECTOR:
@@ -292,6 +329,8 @@ initLocationEngine();
 //                        mFileStreamer.addRecord(timestamp, "rv", 4, sensorEvent.values);
 //                    }
                     Log.d(TAG, "onSensorChanged:rv "+String.valueOf(timestamp));
+                    EventBus.getDefault().post(new CyClSensor(sensorEvent,"rv"));
+
                     break;
 
                 case Sensor.TYPE_GAME_ROTATION_VECTOR:
@@ -299,6 +338,8 @@ initLocationEngine();
 //                        mFileStreamer.addRecord(timestamp, "game_rv", 4, sensorEvent.values);
 //                    }
                     Log.d(TAG, "onSensorChanged:game_rv "+String.valueOf(timestamp));
+                    EventBus.getDefault().post(new CyClSensor(sensorEvent,"game_rv"));
+
                     break;
 
                 case Sensor.TYPE_GEOMAGNETIC_ROTATION_VECTOR:
@@ -306,6 +347,8 @@ initLocationEngine();
 //                        mFileStreamer.addRecord(timestamp, "magnetic_rv", 4, sensorEvent.values);
 //                    }
                     Log.d(TAG, "onSensorChanged:magnetic_rv "+String.valueOf(timestamp));
+                    EventBus.getDefault().post(new CyClSensor(sensorEvent,"magnetic_rv"));
+
                     break;
 
                 case Sensor.TYPE_STEP_COUNTER:
@@ -317,6 +360,7 @@ initLocationEngine();
 //                        mFileStreamer.addRecord(timestamp, "step", 1, values);
 //                    }
                     Log.d(TAG, "onSensorChanged:step "+String.valueOf(timestamp));
+                    EventBus.getDefault().post(new CyClSensor(sensorEvent,"step"));
                     break;
 
                 case Sensor.TYPE_PRESSURE:
@@ -324,6 +368,7 @@ initLocationEngine();
 //                        mFileStreamer.addRecord(timestamp, "pressure", 1, sensorEvent.values);
 //                    }
                     Log.d(TAG, "onSensorChanged:pressure "+String.valueOf(timestamp));
+                    EventBus.getDefault().post(new CyClSensor(sensorEvent,"pressure"));
                     break;
             }
         } catch (Exception e) {

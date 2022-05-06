@@ -17,9 +17,7 @@
         app:layout_constraintTop_toTopOf="parent"
         mapbox:mapbox_cameraTargetLat="48.20355511"
         mapbox:mapbox_cameraTargetLng="16.374893"
-        mapbox:mapbox_cameraZoom="12">
-
-    </com.mapbox.mapboxsdk.maps.MapView>
+        mapbox:mapbox_cameraZoom="12" />
 
     <androidx.constraintlayout.widget.Guideline
         android:id="@+id/guideline9"
@@ -44,17 +42,17 @@
         app:layout_constraintTop_toBottomOf="@+id/mapView" />
 
     <TextView
-        android:id="@+id/minutes_textview"
+        android:id="@+id/line_length"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
-        android:text="Hello"
         android:textSize="20sp"
         android:textStyle="bold"
+        android:text="@string/line_distance_textview"
         app:layout_constraintEnd_toEndOf="@+id/want_to_live_within_textview"
         app:layout_constraintStart_toStartOf="@+id/want_to_live_within_textview"
         app:layout_constraintTop_toBottomOf="@+id/want_to_live_within_textview"
-        tools:text="10min" />
+        tools:text="Line Length" />
 
 
     <Button
@@ -68,17 +66,19 @@
         android:text="@string/start"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.368"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="1.0" />
 
     <Button
         android:id="@+id/button_permissions"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="161dp"
-        android:layout_marginTop="602dp"
-        android:layout_marginEnd="142dp"
-        android:layout_marginBottom="81dp"
+        android:layout_marginStart="158dp"
+        android:layout_marginTop="734dp"
+        android:layout_marginEnd="164dp"
+        android:layout_marginBottom="16dp"
         android:text="Settings"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
@@ -89,66 +89,13 @@
         android:id="@+id/button_second"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="298dp"
+        android:layout_marginStart="300dp"
         android:layout_marginTop="667dp"
         android:layout_marginBottom="16dp"
         android:text="@string/stop"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
-
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="1.0" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
-
-    <!--<?xml version="1.0" encoding="utf-8"?>-->
-<!--<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"-->
-<!--    xmlns:app="http://schemas.android.com/apk/res-auto"-->
-<!--    xmlns:tools="http://schemas.android.com/tools"-->
-<!--    android:layout_width="match_parent"-->
-<!--    android:layout_height="match_parent"-->
-<!--    xmlns:mapbox="http://schemas.android.com/apk/res-auto"-->
-<!--    tools:context=".MainFragment">-->
-
-<!--&lt;!&ndash;    <com.airbnb.lottie.LottieAnimationView&ndash;&gt;-->
-<!--&lt;!&ndash;        app:layout_constraintBottom_toTopOf="@id/button_first"&ndash;&gt;-->
-<!--&lt;!&ndash;        app:layout_constraintEnd_toEndOf="parent"&ndash;&gt;-->
-<!--&lt;!&ndash;        app:layout_constraintStart_toStartOf="parent"&ndash;&gt;-->
-<!--&lt;!&ndash;        app:layout_constraintTop_toTopOf="parent"&ndash;&gt;-->
-<!--&lt;!&ndash;        android:id="@+id/animation_view"&ndash;&gt;-->
-<!--&lt;!&ndash;        android:layout_width="wrap_content"&ndash;&gt;-->
-<!--&lt;!&ndash;        android:layout_height="wrap_content"&ndash;&gt;-->
-<!--&lt;!&ndash;        app:lottie_rawRes="@raw/cycle" />&ndash;&gt;-->
-
-<!--    <com.mapbox.maps.MapView-->
-<!--        android:id="@+id/mapView"-->
-<!--        app:layout_constraintEnd_toEndOf="parent"-->
-<!--        app:layout_constraintStart_toStartOf="parent"-->
-<!--        app:layout_constraintTop_toTopOf="parent"-->
-<!--        android:layout_width="wrap_content"-->
-<!--        android:layout_height="wrap_content"-->
-<!--        mapbox:mapbox_cameraTargetLat="40.7128"-->
-<!--        mapbox:mapbox_cameraTargetLng="-74.0060"-->
-<!--        mapbox:mapbox_cameraZoom="9.0"-->
-<!--        />-->
-
-<!--    <Button-->
-<!--        android:id="@+id/button_first"-->
-<!--        android:layout_width="wrap_content"-->
-<!--        android:layout_height="wrap_content"-->
-<!--        android:text="@string/start"-->
-<!--        app:layout_constraintBottom_toBottomOf="parent"-->
-<!--        app:layout_constraintEnd_toEndOf="parent"-->
-<!--        app:layout_constraintStart_toStartOf="parent"-->
-<!--        app:layout_constraintTop_toBottomOf="@id/mapView" />-->
-
-<!--    <Button-->
-<!--        android:id="@+id/button_second"-->
-<!--        android:layout_width="wrap_content"-->
-<!--        android:layout_height="wrap_content"-->
-<!--        android:text="@string/stop"-->
-<!--        app:layout_constraintBottom_toBottomOf="parent"-->
-<!--        app:layout_constraintEnd_toEndOf="parent"-->
-<!--        app:layout_constraintHorizontal_bias="0.498"-->
-<!--        app:layout_constraintStart_toStartOf="parent"-->
-<!--        app:layout_constraintTop_toBottomOf="@id/button_first" />-->
-<!--</androidx.constraintlayout.widget.ConstraintLayout>-->
