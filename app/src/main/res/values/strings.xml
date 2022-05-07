@@ -19,6 +19,5 @@
 
     <!--Location Component on Fragment below textview in test activity-->
     <string name="location_component_fragment_text">User\'s current location on a map fragment</string>
-    <string name="line_distance_textview">Line distance in %1$s: %2$s</string>
-
+    <string name="line_distance_textview">%1$s: %2$s</string>
 </resources>

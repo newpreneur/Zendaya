@@ -72,6 +72,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
+import java.util.UUID;
 
 
 public class MainFragment extends Fragment  implements
@@ -95,6 +96,7 @@ public class MainFragment extends Fragment  implements
     private MapboxMap mapboxMap;
     private TextView lineLengthTextView;
     private double totalLineDistance = 0;
+    private boolean flag=true;
 
     private FragmentFirstBinding binding;
     private Context ctx;
@@ -177,7 +179,7 @@ public class MainFragment extends Fragment  implements
                         // Adjust the TextView to display the new total line distance.
                         // DISTANCE_UNITS must be equal to a String found in the TurfConstants class
                         binding.lineLength.setText(String.format(getString(R.string.line_distance_textview), DISTANCE_UNITS,
-                                String.valueOf(totalLineDistance)));
+                                String.valueOf(Math.round(totalLineDistance))));
 
                         // Set the specific source's GeoJSON data
                         geoJsonSource.setGeoJson(Feature.fromGeometry(LineString.fromLngLats(pointList)));
@@ -190,50 +192,65 @@ public class MainFragment extends Fragment  implements
     public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        binding.buttonFirst.setOnClickListener(new View.OnClickListener() {
+        binding.button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                requireActivity().startService(new Intent(ctx, CyClCoreService.class));
+                String session = UUID.randomUUID().toString();
+                if(flag) {
+                    requireActivity().startService(new Intent(ctx, CyClCoreService.class));
+                    flag = false;
+                    binding.button.setText("STOP");
+                }
+                else{
+                    requireActivity().stopService(new Intent(ctx, CyClCoreService.class));
+                    flag = true;
+                    binding.button.setText("SAVING LOCATION");
+                    binding.button.setClickable(false);
+                    db.collection("users")
+                            .document(session)
+                            .collection("Location")
+                            .add(point)
+                            .addOnSuccessListener(new OnSuccessListener<DocumentReference>() {
+                                @Override
+                                public void onSuccess(DocumentReference documentReference) {
+                                    Log.d(TAG, "DocumentSnapshot added with ID: " + documentReference.getId());
+                                    binding.button.setText("SAVING SENSORS");
+                                    binding.button.setClickable(false);
+                                    point.clear();
+                                }
+                            })
+                            .addOnFailureListener(new OnFailureListener() {
+                                @Override
+                                public void onFailure(@NonNull Exception e) {
+                                    Log.w(TAG, "Error adding document", e);
+                                }
+                            });
+
+                    db.collection("users")
+                            .document(session)
+                            .collection("SensorData")
+                            .add(sensordata)
+                            .addOnSuccessListener(new OnSuccessListener<DocumentReference>() {
+                                @Override
+                                public void onSuccess(DocumentReference documentReference) {
+                                    Log.d(TAG, "DocumentSnapshot added with ID: " + documentReference.getId());
+                                    sensordata.clear();
+                                    binding.button.setText("START");
+                                    binding.button.setClickable(true);
+                                    binding.lineLength.setText(" ");
+                                }
+                            })
+                            .addOnFailureListener(new OnFailureListener() {
+                                @Override
+                                public void onFailure(@NonNull Exception e) {
+                                    Log.w(TAG, "Error adding document", e);
+                                }
+                            });
+
+                }
             }
         });
-        binding.buttonSecond.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                requireActivity().stopService(new Intent(ctx, CyClCoreService.class));
-                db.collection("users")
-                        .add(point)
-                        .addOnSuccessListener(new OnSuccessListener<DocumentReference>() {
-                            @Override
-                            public void onSuccess(DocumentReference documentReference) {
-                                Log.d(TAG, "DocumentSnapshot added with ID: " + documentReference.getId());
-                                point.clear();
-                            }
-                        })
-                        .addOnFailureListener(new OnFailureListener() {
-                            @Override
-                            public void onFailure(@NonNull Exception e) {
-                                Log.w(TAG, "Error adding document", e);
-                            }
-                        });
 
-                db.collection("users")
-                        .add(sensordata)
-                        .addOnSuccessListener(new OnSuccessListener<DocumentReference>() {
-                            @Override
-                            public void onSuccess(DocumentReference documentReference) {
-                                Log.d(TAG, "DocumentSnapshot added with ID: " + documentReference.getId());
-                                sensordata.clear();
-                            }
-                        })
-                        .addOnFailureListener(new OnFailureListener() {
-                            @Override
-                            public void onFailure(@NonNull Exception e) {
-                                Log.w(TAG, "Error adding document", e);
-                            }
-                        });
-
-            }
-        });
 
         binding.buttonPermissions.setOnClickListener(new View.OnClickListener() {
             @Override
