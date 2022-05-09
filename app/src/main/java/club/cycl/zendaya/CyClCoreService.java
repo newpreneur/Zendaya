@@ -50,13 +50,6 @@ public class CyClCoreService extends Service implements SensorEventListener {
     private final float[] mGyroBias = new float[3];
     private final float[] mMagnetBias = new float[3];
 
-    // Start and end times in milliseconds
-    private long startTime, endTime;
-
-    // Is the service tracking time?
-    private boolean isTimerRunning;
-
-
     private static final long DEFAULT_INTERVAL_IN_MILLISECONDS = 1000L;
     private static final long DEFAULT_MAX_WAIT_TIME = DEFAULT_INTERVAL_IN_MILLISECONDS * 5;
     private LocationEngine locationEngine;
@@ -193,6 +186,11 @@ initLocationEngine();
     public int onStartCommand(Intent intent, int flags, int startId) {
         createNotificationChannel();
         startForeground(1, notification);
+        Log.e(TAG, "Sensor DELAY 1: "+String.valueOf(SensorManager.SENSOR_DELAY_GAME));
+        Log.e(TAG, "Sensor DELAY 2: "+String.valueOf(SensorManager.SENSOR_DELAY_NORMAL));
+        Log.e(TAG, "Sensor DELAY 3: "+String.valueOf(SensorManager.SENSOR_DELAY_UI));
+        Log.e(TAG, "Sensor DELAY 4: "+String.valueOf(SensorManager.SENSOR_DELAY_FASTEST));
+
         mSensorManager = (SensorManager) this.getSystemService(Context.SENSOR_SERVICE);
         mSensors.put("acce", mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER));
         mSensors.put("acce_uncalib", mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER_UNCALIBRATED));
@@ -221,8 +219,6 @@ initLocationEngine();
     public IBinder onBind(Intent intent) {
         return serviceBinder;
     }
-
-
 
     @Override
     public void onSensorChanged(SensorEvent sensorEvent) {
@@ -255,7 +251,6 @@ initLocationEngine();
 //                    }
                     Log.d(TAG, "onSensorChanged: acce_uncalib,acce_bias "+String.valueOf(timestamp));
                     EventBus.getDefault().post(new CyClSensor(sensorEvent,"acce_uncalib"));
-
                     break;
 
                 case Sensor.TYPE_GYROSCOPE:
@@ -300,29 +295,29 @@ initLocationEngine();
                     EventBus.getDefault().post(new CyClSensor(sensorEvent,"gravity"));
                     break;
 
-                case Sensor.TYPE_MAGNETIC_FIELD:
-                    mMagnetMeasure[0] = sensorEvent.values[0];
-                    mMagnetMeasure[1] = sensorEvent.values[1];
-                    mMagnetMeasure[2] = sensorEvent.values[2];
+//                case Sensor.TYPE_MAGNETIC_FIELD:
+//                    mMagnetMeasure[0] = sensorEvent.values[0];
+//                    mMagnetMeasure[1] = sensorEvent.values[1];
+//                    mMagnetMeasure[2] = sensorEvent.values[2];
 //                    if (isFileSaved) {
 //                        mFileStreamer.addRecord(timestamp, "magnet", 3, sensorEvent.values);
 //                    }
-                    Log.d(TAG, "onSensorChanged:magnet "+String.valueOf(timestamp));
-                    EventBus.getDefault().post(new CyClSensor(sensorEvent,"magnet"));
-
-                    break;
-
-                case Sensor.TYPE_MAGNETIC_FIELD_UNCALIBRATED:
-                    mMagnetBias[0] = sensorEvent.values[3];
-                    mMagnetBias[1] = sensorEvent.values[4];
-                    mMagnetBias[2] = sensorEvent.values[5];
+//                    Log.d(TAG, "onSensorChanged:magnet "+String.valueOf(timestamp));
+//                    EventBus.getDefault().post(new CyClSensor(sensorEvent,"magnet"));
+//
+//                    break;
+//
+//                case Sensor.TYPE_MAGNETIC_FIELD_UNCALIBRATED:
+//                    mMagnetBias[0] = sensorEvent.values[3];
+//                    mMagnetBias[1] = sensorEvent.values[4];
+//                    mMagnetBias[2] = sensorEvent.values[5];
 //                    if (isFileSaved) {
 //                        mFileStreamer.addRecord(timestamp, "magnet_uncalib", 3, sensorEvent.values);
 //                        mFileStreamer.addRecord(timestamp, "magnet_bias", 3, mMagnetBias);
 //                    }
-                    Log.d(TAG, "onSensorChanged:magnet_uncalib,magnet_bias "+String.valueOf(timestamp));
-                    EventBus.getDefault().post(new CyClSensor(sensorEvent,"magnet_uncalib"));
-                    break;
+//                    Log.d(TAG, "onSensorChanged:magnet_uncalib,magnet_bias "+String.valueOf(timestamp));
+//                    EventBus.getDefault().post(new CyClSensor(sensorEvent,"magnet_uncalib"));
+//                    break;
 
                 case Sensor.TYPE_ROTATION_VECTOR:
 //                    if (isFileSaved) {
@@ -330,7 +325,6 @@ initLocationEngine();
 //                    }
                     Log.d(TAG, "onSensorChanged:rv "+String.valueOf(timestamp));
                     EventBus.getDefault().post(new CyClSensor(sensorEvent,"rv"));
-
                     break;
 
                 case Sensor.TYPE_GAME_ROTATION_VECTOR:
@@ -351,25 +345,25 @@ initLocationEngine();
 
                     break;
 
-                case Sensor.TYPE_STEP_COUNTER:
-                    if (mInitialStepCount < 0) {
-                        mInitialStepCount = sensorEvent.values[0] - 1;
-                    }
-                    values[0] = sensorEvent.values[0] - mInitialStepCount;
+//                case Sensor.TYPE_STEP_COUNTER:
+//                    if (mInitialStepCount < 0) {
+//                        mInitialStepCount = sensorEvent.values[0] - 1;
+//                    }
+//                    values[0] = sensorEvent.values[0] - mInitialStepCount;
 //                    if (isFileSaved) {
 //                        mFileStreamer.addRecord(timestamp, "step", 1, values);
 //                    }
-                    Log.d(TAG, "onSensorChanged:step "+String.valueOf(timestamp));
-                    EventBus.getDefault().post(new CyClSensor(sensorEvent,"step"));
-                    break;
-
-                case Sensor.TYPE_PRESSURE:
+//                    Log.d(TAG, "onSensorChanged:step "+String.valueOf(timestamp));
+//                    EventBus.getDefault().post(new CyClSensor(sensorEvent,"step"));
+//                    break;
+//
+//                case Sensor.TYPE_PRESSURE:
 //                    if (isFileSaved) {
 //                        mFileStreamer.addRecord(timestamp, "pressure", 1, sensorEvent.values);
 //                    }
-                    Log.d(TAG, "onSensorChanged:pressure "+String.valueOf(timestamp));
-                    EventBus.getDefault().post(new CyClSensor(sensorEvent,"pressure"));
-                    break;
+//                    Log.d(TAG, "onSensorChanged:pressure "+String.valueOf(timestamp));
+//                    EventBus.getDefault().post(new CyClSensor(sensorEvent,"pressure"));
+//                    break;
             }
         } catch (Exception e) {
             Log.d(TAG, "onSensorChanged: Something is wrong.");

@@ -16,9 +16,9 @@
         android:theme="@style/Theme.Zendaya">
         <service
             android:name=".CyClCoreService"
+            android:foregroundServiceType="location"
             android:enabled="true"
             android:exported="true" />
-
         <activity
             android:name=".MainActivity"
             android:exported="true"
